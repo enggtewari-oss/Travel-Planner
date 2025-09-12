@@ -97,64 +97,109 @@ MOCK_HOTELS = {
 }
 
 async def get_weather_data(location: str) -> WeatherInfo:
-    """Get real weather data from OpenWeatherMap API"""
-    api_key = os.environ.get('OPENWEATHERMAP_API_KEY')
+    """Get mock weather data for demo purposes"""
+    # Mock weather data for popular destinations
+    weather_data = {
+        "paris": {
+            "temp": 18, "condition": "Clear", "humidity": 65, "wind": 12,
+            "forecast": [
+                {"date": "2024-12-13", "temp": 18, "condition": "Clear", "description": "clear sky"},
+                {"date": "2024-12-14", "temp": 16, "condition": "Clouds", "description": "few clouds"},
+                {"date": "2024-12-15", "temp": 14, "condition": "Rain", "description": "light rain"},
+                {"date": "2024-12-16", "temp": 12, "condition": "Clouds", "description": "overcast clouds"},
+                {"date": "2024-12-17", "temp": 15, "condition": "Clear", "description": "clear sky"},
+            ]
+        },
+        "tokyo": {
+            "temp": 8, "condition": "Clear", "humidity": 45, "wind": 8,
+            "forecast": [
+                {"date": "2024-12-13", "temp": 8, "condition": "Clear", "description": "clear sky"},
+                {"date": "2024-12-14", "temp": 10, "condition": "Clouds", "description": "few clouds"},
+                {"date": "2024-12-15", "temp": 12, "condition": "Clear", "description": "clear sky"},
+                {"date": "2024-12-16", "temp": 9, "condition": "Clouds", "description": "scattered clouds"},
+                {"date": "2024-12-17", "temp": 11, "condition": "Clear", "description": "clear sky"},
+            ]
+        },
+        "new york": {
+            "temp": 5, "condition": "Snow", "humidity": 78, "wind": 15,
+            "forecast": [
+                {"date": "2024-12-13", "temp": 5, "condition": "Snow", "description": "light snow"},
+                {"date": "2024-12-14", "temp": 3, "condition": "Clouds", "description": "overcast clouds"},
+                {"date": "2024-12-15", "temp": 7, "condition": "Clear", "description": "clear sky"},
+                {"date": "2024-12-16", "temp": 4, "condition": "Clouds", "description": "broken clouds"},
+                {"date": "2024-12-17", "temp": 6, "condition": "Clear", "description": "clear sky"},
+            ]
+        },
+        "london": {
+            "temp": 12, "condition": "Rain", "humidity": 85, "wind": 18,
+            "forecast": [
+                {"date": "2024-12-13", "temp": 12, "condition": "Rain", "description": "light rain"},
+                {"date": "2024-12-14", "temp": 11, "condition": "Clouds", "description": "overcast clouds"},
+                {"date": "2024-12-15", "temp": 13, "condition": "Rain", "description": "moderate rain"},
+                {"date": "2024-12-16", "temp": 10, "condition": "Clouds", "description": "broken clouds"},
+                {"date": "2024-12-17", "temp": 14, "condition": "Clouds", "description": "few clouds"},
+            ]
+        },
+        "barcelona": {
+            "temp": 22, "condition": "Clear", "humidity": 58, "wind": 10,
+            "forecast": [
+                {"date": "2024-12-13", "temp": 22, "condition": "Clear", "description": "clear sky"},
+                {"date": "2024-12-14", "temp": 24, "condition": "Clear", "description": "clear sky"},
+                {"date": "2024-12-15", "temp": 21, "condition": "Clouds", "description": "few clouds"},
+                {"date": "2024-12-16", "temp": 20, "condition": "Clear", "description": "clear sky"},
+                {"date": "2024-12-17", "temp": 23, "condition": "Clear", "description": "clear sky"},
+            ]
+        },
+        "rome": {
+            "temp": 19, "condition": "Clouds", "humidity": 72, "wind": 14,
+            "forecast": [
+                {"date": "2024-12-13", "temp": 19, "condition": "Clouds", "description": "scattered clouds"},
+                {"date": "2024-12-14", "temp": 17, "condition": "Rain", "description": "light rain"},
+                {"date": "2024-12-15", "temp": 20, "condition": "Clear", "description": "clear sky"},
+                {"date": "2024-12-16", "temp": 18, "condition": "Clouds", "description": "broken clouds"},
+                {"date": "2024-12-17", "temp": 21, "condition": "Clear", "description": "clear sky"},
+            ]
+        }
+    }
     
-    try:
-        async with httpx.AsyncClient() as client:
-            # Get coordinates first
-            geo_response = await client.get(
-                f"http://api.openweathermap.org/geo/1.0/direct",
-                params={"q": location, "limit": 1, "appid": api_key},
-                timeout=10
-            )
-            
-            if not geo_response.json():
-                raise HTTPException(404, f"Location '{location}' not found")
-            
-            geo_data = geo_response.json()[0]
-            lat, lon = geo_data['lat'], geo_data['lon']
-            
-            # Get weather data
-            weather_response = await client.get(
-                f"http://api.openweathermap.org/data/2.5/forecast",
-                params={
-                    "lat": lat, 
-                    "lon": lon, 
-                    "appid": api_key, 
-                    "units": "metric"
-                },
-                timeout=10
-            )
-            
-            weather_data = weather_response.json()
-            current = weather_data['list'][0]
-            
-            # Extract 5-day forecast
-            forecast_days = []
-            for i in range(0, min(len(weather_data['list']), 5)):
-                forecast = weather_data['list'][i]
-                forecast_days.append({
-                    "date": forecast['dt_txt'].split(' ')[0],
-                    "temp": round(forecast['main']['temp']),
-                    "condition": forecast['weather'][0]['main'],
-                    "description": forecast['weather'][0]['description']
-                })
-            
-            return WeatherInfo(
-                location=location.title(),
-                temperature=round(current['main']['temp']),
-                condition=current['weather'][0]['main'],
-                humidity=current['main']['humidity'],
-                wind_speed=round(current['wind']['speed'] * 3.6, 1),  # Convert m/s to km/h
-                forecast_days=forecast_days
-            )
-            
-    except httpx.TimeoutException:
-        raise HTTPException(408, "Weather service timeout")
-    except Exception as e:
-        logging.error(f"Weather API error: {str(e)}")
-        raise HTTPException(502, f"Weather service error: {str(e)}")
+    # Default weather for unknown locations
+    default_weather = {
+        "temp": 20, "condition": "Clear", "humidity": 60, "wind": 10,
+        "forecast": [
+            {"date": "2024-12-13", "temp": 20, "condition": "Clear", "description": "clear sky"},
+            {"date": "2024-12-14", "temp": 22, "condition": "Clouds", "description": "few clouds"},
+            {"date": "2024-12-15", "temp": 18, "condition": "Rain", "description": "light rain"},
+            {"date": "2024-12-16", "temp": 19, "condition": "Clouds", "description": "scattered clouds"},
+            {"date": "2024-12-17", "temp": 21, "condition": "Clear", "description": "clear sky"},
+        ]
+    }
+    
+    # Get weather data for location (case insensitive)
+    location_key = location.lower().strip()
+    weather = weather_data.get(location_key, default_weather)
+    
+    # Calculate today's date and adjust forecast dates
+    from datetime import datetime, timedelta
+    today = datetime.now()
+    adjusted_forecast = []
+    
+    for i, day in enumerate(weather["forecast"]):
+        forecast_date = today + timedelta(days=i)
+        adjusted_forecast.append({
+            "date": forecast_date.strftime("%Y-%m-%d"),
+            "temp": day["temp"],
+            "condition": day["condition"],
+            "description": day["description"]
+        })
+    
+    return WeatherInfo(
+        location=location.title(),
+        temperature=weather["temp"],
+        condition=weather["condition"],
+        humidity=weather["humidity"],
+        wind_speed=weather["wind"],
+        forecast_days=adjusted_forecast
+    )
 
 async def get_ai_recommendations(destination: str, hotels: List[Hotel], weather: WeatherInfo, budget: str) -> str:
     """Get AI-powered travel recommendations using OpenAI GPT-5"""
