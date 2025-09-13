@@ -1,0 +1,76 @@
+name: Build & Deploy Travel-Planner to GitHub Pages
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+# Required permissions for Pages deployments
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment at a time
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend   # build inside your frontend folder
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      # Install and build
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the site
+        run: |
+          # Common build script for CRA/Vite/etc.
+          # If your package.json uses a different script name, change it.
+          npm run build
+
+      # Detect output folder (prefer "dist", then "build")
+      - name: Detect output directory
+        id: out
+        run: |
+          if [ -d "dist" ]; then echo "dir=dist" >> $GITHUB_OUTPUT;
+          elif [ -d "build" ]; then echo "dir=build" >> $GITHUB_OUTPUT;
+          else echo "No dist/ or build/ folder found!" >&2; exit 1; fi
+
+      # Prepare Pages metadata
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      # Upload the built site as the Pages artifact
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: frontend/${{ steps.out.outputs.dir }}
+
+  deploy:
+    # Deploy after a successful build
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
