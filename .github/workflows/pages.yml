@@ -31,25 +31,14 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
-      - name: Install dependencies (npm or yarn)
-        run: |
-          if [ -f yarn.lock ]; then
-            corepack enable || true
-            yarn install --frozen-lockfile || yarn install
-          else
-            npm ci || npm install
-          fi
+      - name: Install dependencies (npm)
+        run: npm ci || npm install
 
       - name: Build the site (CRACO/CRA)
         env:
           PUBLIC_URL: /Travel-Planner/
           CI: "false"
-        run: |
-          if [ -f yarn.lock ]; then
-            yarn build
-          else
-            npm run build
-          fi
+        run: npm run build
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
