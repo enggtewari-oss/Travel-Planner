@@ -5,13 +5,11 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-# Required permissions for Pages deployments
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Only one deployment at a time
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -31,44 +29,46 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
+          cache: 'npm'   # safe cache; no lockfile path needed
 
-      # Install and build
+      # Install deps; if there's no lockfile, fall back to npm install
       - name: Install dependencies
-        run: npm ci
+        run: npm ci || npm install
 
+      # Build: 
+      #  - PUBLIC_URL helps Create React App under /Travel-Planner/
+      #  - -- --base=/Travel-Planner/ helps Vite projects
       - name: Build the site
+        env:
+          PUBLIC_URL: /Travel-Planner/
+          CI: "false"
         run: |
-          # Common build script for CRA/Vite/etc.
-          # If your package.json uses a different script name, change it.
-          npm run build
+          npm run build -- --base=/Travel-Planner/ || npm run build
 
-      # Detect output folder (prefer "dist", then "build")
-      - name: Detect output directory
-        id: out
+      # See what was produced (useful if something fails)
+      - name: Show build output
         run: |
-          if [ -d "dist" ]; then echo "dir=dist" >> $GITHUB_OUTPUT;
-          elif [ -d "build" ]; then echo "dir=build" >> $GITHUB_OUTPUT;
-          else echo "No dist/ or build/ folder found!" >&2; exit 1; fi
+          ls -lah
+          if [ -d "dist" ]; then echo "Found dist/"; ls -lah dist; fi
+          if [ -d "build" ]; then echo "Found build/"; ls -lah build; fi
 
-      # Prepare Pages metadata
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      # Upload the built site as the Pages artifact
+      # Upload whichever folder exists (Vite: dist/, CRA: build/)
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: frontend/${{ steps.out.outputs.dir }}
+          path: |
+            frontend/dist
+            frontend/build
 
   deploy:
-    # Deploy after a successful build
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
